@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Address Footprint Gathering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .left-panel, .right-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .center-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .hint {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .hint h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .hint p {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .results {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .result-item strong {
+            color: #667eea;
+        }
+
+        .center-image {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .center-image::before {
+            content: "🔍";
+            font-size: 4rem;
+        }
+
+        .side-image {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .left-panel .side-image::before {
+            content: "🌐";
+            font-size: 3rem;
+        }
+
+        .right-panel .side-image::before {
+            content: "📊";
+            font-size: 3rem;
+        }
+
+        .validator-link {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .validator-link a {
+            color: #856404;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .validator-link a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .center-panel {
+                order: -1;
+            }
+            
+            .center-image {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .center-image::before {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .left-panel, .right-panel, .center-panel {
+                padding: 20px;
+            }
+            
+            .center-image {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .center-image::before {
+                font-size: 2.5rem;
+            }
+            
+            .side-image {
+                height: 120px;
+            }
+            
+            .side-image::before {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .left-panel, .right-panel, .center-panel {
+                padding: 15px;
+            }
+            
+            .form-group input {
+                font-size: 14px;
+                padding: 10px;
+            }
+            
+            .btn {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>IP Address Footprint Gathering</h1>
+            <p>Comprehensive IP Address Analysis and Information Collection Tool</p>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="side-image"></div>
+                
+                <div class="hint">
+                    <h4>Hint 1: Target URL</h4>
+                    <p>Enter the target URL to check for IP address information and network footprint.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="targetUrl">Target URL:</label>
+                    <input type="url" id="targetUrl" placeholder="https://example.com" required>
+                </div>
+
+                <div class="hint">
+                    <h4>Hint 2: IP Address Validation</h4>
+                    <p>Enter IPv4 or IPv6 address for comprehensive analysis and validation.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="ipAddress">IP Address (IPv4/IPv6):</label>
+                    <input type="text" id="ipAddress" placeholder="192.168.1.1 or 2001:db8::1" required>
+                </div>
+
+                <button class="btn" onclick="analyzeIP()">Analyze IP Address</button>
+                <button class="btn btn-secondary" onclick="gatherFootprint()">Gather Footprint</button>
+            </div>
+
+            <div class="center-panel">
+                <div class="center-image"></div>
+                
+                <div class="hint">
+                    <h4>Hint 3: Information Collection</h4>
+                    <p>Collect comprehensive information including geolocation, ISP, ASN, and network details.</p>
+                </div>
+
+                <button class="btn btn-secondary" onclick="collectAllInfo()">Collect All Information</button>
+                
+                <div class="hint">
+                    <h4>Hint 4: PDF Report</h4>
+                    <p>Generate detailed PDF report with all collected information and analysis results.</p>
+                </div>
+
+                <button class="btn btn-danger" onclick="generatePDFReport()">Generate PDF Report</button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="side-image"></div>
+                
+                <div class="hint">
+                    <h4>Hint 5: Report Validator</h4>
+                    <p>Validate your security report using our integrated validator tool.</p>
+                </div>
+
+                <div class="validator-link">
+                    <a href="https://www.cyberwolf.pro/bug-report-validator" target="_blank" onclick="validateReport()">
+                        🔗 Bug Report Validator
+                    </a>
+                </div>
+
+                <div class="results" id="results">
+                    <h3>Analysis Results</h3>
+                    <div id="resultContent">
+                        <p>Enter URL and IP address to begin analysis...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IP Address validation functions
+        function isValidIPv4(ip) {
+            const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            return ipv4Regex.test(ip);
+        }
+
+        function isValidIPv6(ip) {
+            const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
+            return ipv6Regex.test(ip);
+        }
+
+        function isValidURL(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        // Mock API functions for demonstration
+        async function mockAPI(endpoint, data) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        success: true,
+                        data: data
+                    });
+                }, 1500);
+            });
+        }
+
+        // IP Analysis function
+        async function analyzeIP() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            if (!ipAddress || !targetUrl) {
+                alert('Please enter both URL and IP address');
+                return;
+            }
+
+            if (!isValidIPv4(ipAddress) && !isValidIPv6(ipAddress)) {
+                alert('Please enter a valid IPv4 or IPv6 address');
+                return;
+            }
+
+            if (!isValidURL(targetUrl)) {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            showLoading(true);
+            
+            try {
+                // Simulate API call
+                const result = await mockAPI('/analyze', {
+                    ip: ipAddress,
+                    url: targetUrl,
+                    timestamp: new Date().toISOString()
+                });
+
+                displayResults('IP Analysis Results', {
+                    'Target URL': targetUrl,
+                    'IP Address': ipAddress,
+                    'IP Type': isValidIPv4(ipAddress) ? 'IPv4' : 'IPv6',
+                    'Analysis Status': 'Completed',
+                    'Timestamp': new Date().toLocaleString(),
+                    'Geolocation': 'Simulated: United States',
+                    'ISP': 'Simulated: Example ISP',
+                    'ASN': 'AS12345',
+                    'Organization': 'Example Organization'
+                });
+            } catch (error) {
+                displayError('Analysis failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Gather Footprint function
+        async function gatherFootprint() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            if (!ipAddress || !targetUrl) {
+                alert('Please enter both URL and IP address');
+                return;
+            }
+
+            showLoading(true);
+            
+            try {
+                const result = await mockAPI('/footprint', {
+                    ip: ipAddress,
+                    url: targetUrl
+                });
+
+                displayResults('Footprint Analysis', {
+                    'Network Range': '192.168.1.0/24',
+                    'Open Ports': '80, 443, 22, 21',
+                    'Services': 'HTTP, HTTPS, SSH, FTP',
+                    'SSL Certificate': 'Valid',
+                    'DNS Records': 'A, AAAA, MX, TXT',
+                    'Subdomains': 'www, mail, ftp',
+                    'Technology Stack': 'Apache, PHP, MySQL'
+                });
+            } catch (error) {
+                displayError('Footprint gathering failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Collect All Information function
+        async function collectAllInfo() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            if (!ipAddress || !targetUrl) {
+                alert('Please enter both URL and IP address');
+                return;
+            }
+
+            showLoading(true);
+            
+            try {
+                const result = await mockAPI('/collect-all', {
+                    ip: ipAddress,
+                    url: targetUrl
+                });
+
+                displayResults('Complete Information Collection', {
+                    'IP Address': ipAddress,
+                    'Target URL': targetUrl,
+                    'Geolocation': 'Country: US, City: New York',
+                    'ISP Information': 'Provider: Example ISP, ASN: AS12345',
+                    'Network Info': 'Subnet: /24, Gateway: 192.168.1.1',
+                    'Port Scan': 'Open: 22, 80, 443, 8080',
+                    'SSL/TLS': 'Version: TLS 1.3, Cipher: AES-256-GCM',
+                    'DNS Information': 'A: 192.168.1.100, AAAA: 2001:db8::1',
+                    'Whois Data': 'Registered: 2020-01-01, Expires: 2025-01-01',
+                    'Vulnerability Scan': 'Status: Clean, No critical issues found',
+                    'Social Media': 'No associated accounts found',
+                    'Dark Web': 'No mentions found',
+                    'Threat Intelligence': 'Reputation: Good, No known threats'
+                });
+            } catch (error) {
+                displayError('Information collection failed: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Generate PDF Report function
+        function generatePDFReport() {
+            const ipAddress = document.getElementById('ipAddress').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            if (!ipAddress || !targetUrl) {
+                alert('Please enter both URL and IP address first');
+                return;
+            }
+
+            // Create PDF content
+            const reportData = {
+                title: 'IP Address Footprint Report',
+                date: new Date().toLocaleDateString(),
+                target: targetUrl,
+                ip: ipAddress,
+                summary: 'Comprehensive IP address analysis and footprint gathering report',
+                sections: [
+                    'Network Information',
+                    'Security Assessment',
+                    'Geolocation Data',
+                    'Vulnerability Analysis',
+                    'Recommendations'
+                ]
+            };
+
+            // Simulate PDF generation
+            showLoading(true);
+            
+            setTimeout(() => {
+                const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ip-footprint-report-${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showLoading(false);
+                displayResults('PDF Report Generated', {
+                    'Report Name': `ip-footprint-report-${Date.now()}.json`,
+                    'Status': 'Successfully generated',
+                    'Sections': '5 comprehensive sections',
+                    'File Size': 'Approximately 2.5 KB',
+                    'Format': 'JSON (Convert to PDF with external tool)'
+                });
+            }, 2000);
+        }
+
+        // Validate Report function
+        function validateReport() {
+            const validatorUrl = 'https://www.cyberwolf.pro/bug-report-validator';
+            
+            // Open validator in new tab
+            window.open(validatorUrl, '_blank');
+            
+            displayResults('Report Validator', {
+                'Validator URL': validatorUrl,
+                'Status': 'Opened in new tab',
+                'Instructions': 'Upload your security report for validation',
+                'Supported Formats': 'PDF, DOC, TXT',
+                'Validation Criteria': 'Vulnerability assessment, Report structure, Technical accuracy'
+            });
+        }
+
+        // Display results function
+        function displayResults(title, data) {
+            const resultContent = document.getElementById('resultContent');
+            let html = `<h3>${title}</h3>`;
+            
+            for (const [key, value] of Object.entries(data)) {
+                html += `
+                    <div class="result-item">
+                        <strong>${key}:</strong> ${value}
+                    </div>
+                `;
+            }
+            
+            resultContent.innerHTML = html;
+        }
+
+        // Display error function
+        function displayError(message) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.innerHTML = `
+                <div class="result-item" style="border-left-color: #dc3545; background-color: #f8d7da;">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+
+        // Show/hide loading function
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('IP Address Footprint Gathering Tool initialized');
+            
+            // Add enter key support for inputs
+            document.getElementById('targetUrl').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    analyzeIP();
+                }
+            });
+            
+            document.getElementById('ipAddress').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    analyzeIP();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
