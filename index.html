@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IP Address Footprint Gatharing</title>
+    <meta name="description" content="Single-page tool to gather IP and DNS footprint, generate PDF report, and validate against an external bug report validator." />
+
+    <style>
+      :root {
+        --bg: #0f1220;
+        --panel: #171a2b;
+        --panel-2: #1e2238;
+        --text: #e8ecf1;
+        --muted: #a7b0c0;
+        --primary: #6aa5ff;
+        --accent: #35d0a5;
+        --danger: #ff6b6b;
+        --warning: #ffd166;
+        --shadow: 0 10px 30px rgba(0,0,0,.25);
+        --radius: 14px;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 800px at 80% -10%, rgba(86, 108, 245, .25), transparent 60%),
+                    radial-gradient(1000px 700px at 10% -20%, rgba(53, 208, 165, .18), transparent 55%),
+                    var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+
+      header {
+        position: relative;
+        padding: 28px 16px 8px;
+        text-align: center;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: .2px;
+      }
+
+      .subtitle {
+        margin: 6px 0 0 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .hero-center-image {
+        width: 160px;
+        height: 160px;
+        border-radius: 18px;
+        object-fit: cover;
+        display: block;
+        margin: 18px auto 4px;
+        box-shadow: var(--shadow);
+        border: 1px solid #2b3152;
+      }
+
+      .edge-image {
+        position: fixed;
+        top: 18px;
+        width: 120px;
+        height: 120px;
+        border-radius: 16px;
+        object-fit: cover;
+        box-shadow: var(--shadow);
+        border: 1px solid #2b3152;
+        z-index: 1;
+      }
+      .edge-left { left: 18px; }
+      .edge-right { right: 18px; }
+
+      main {
+        position: relative;
+        z-index: 2;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 12px 16px 40px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid #262a45;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px;
+      }
+
+      .card h2 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 8px;
+        margin: 10px 0 6px;
+      }
+
+      input[type="text"], input[type="url"] {
+        flex: 1;
+        background: #0f1326;
+        color: var(--text);
+        border: 1px solid #2a2f4d;
+        border-radius: 12px;
+        padding: 12px 12px;
+        outline: none;
+      }
+      input::placeholder { color: #7f8a9f; }
+
+      .btn {
+        background: var(--primary);
+        color: #0b0d18;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform .04s ease;
+        white-space: nowrap;
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:disabled { opacity: .6; cursor: not-allowed; }
+      .btn.secondary { background: #3b4166; color: var(--text); }
+      .btn.accent { background: var(--accent); color: #07251c; }
+      .btn.warn { background: var(--warning); color: #231f0f; }
+
+      .hints ul { margin: 8px 0 0 18px; padding: 0; }
+      .hints li { margin: 6px 0; color: var(--muted); }
+
+      .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+      .report {
+        margin-top: 16px;
+      }
+      .report-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .kbd {
+        background: #0c0f1e;
+        border: 1px solid #2a2f4d;
+        padding: 2px 8px;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .section {
+        background: #10152a;
+        border: 1px solid #2a2f4d;
+        border-radius: 12px;
+        padding: 12px;
+        margin: 10px 0;
+      }
+      .section h3 { margin: 0 0 8px 0; font-size: 16px; }
+
+      .keyvals { display: grid; grid-template-columns: 1fr 2fr; gap: 6px 12px; }
+      .key { color: var(--muted); }
+
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #222747; }
+      th { color: var(--muted); font-weight: 600; }
+
+      .muted { color: var(--muted); }
+      .ok { color: var(--accent); }
+      .bad { color: var(--danger); }
+
+      footer { text-align: center; color: var(--muted); font-size: 12px; padding: 22px 0 40px; }
+
+      @media (max-width: 1000px) {
+        .edge-image { display: none; }
+        .grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 560px) {
+        .input-row { flex-direction: column; }
+        .btn { width: 100%; }
+        .keyvals { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <img class="edge-image edge-left" alt="Left square" src="https://placehold.co/220x220/png?text=Security" />
+    <img class="edge-image edge-right" alt="Right square" src="https://placehold.co/220x220/png?text=Networking" />
+
+    <header>
+      <h1 class="title">IP Address Footprint Gatharing</h1>
+      <p class="subtitle">Check URLs and IPs, collect DNS/IP intelligence, and export a PDF report.</p>
+      <img class="hero-center-image" alt="Center square" src="https://placehold.co/320x320/png?text=IP+Footprint" />
+    </header>
+
+    <main>
+      <div class="grid">
+        <section class="card">
+          <h2>Inputs</h2>
+
+          <label class="muted">Target URL</label>
+          <div class="input-row">
+            <input id="urlInput" type="url" placeholder="https://example.com or example.com" />
+            <button class="btn" id="btnCheckUrl" type="button">Check URL DNS</button>
+          </div>
+
+          <label class="muted">IP Address (IPv4 or IPv6)</label>
+          <div class="input-row">
+            <input id="ipInput" type="text" placeholder="e.g. 8.8.8.8 or 2606:4700:4700::1111" />
+            <button class="btn" id="btnCheckIp" type="button">Check IP Info</button>
+          </div>
+
+          <div class="row-actions">
+            <button class="btn accent" id="btnCollectAll" type="button">Collect All</button>
+            <button class="btn secondary" id="btnClear" type="button">Clear</button>
+          </div>
+
+          <div class="hints section" id="hints">
+            <h3>Hints</h3>
+            <ul>
+              <li><strong>Hint 1</strong>: The target URL to check for IP address.</li>
+              <li><strong>Hint 2</strong>: The IP address for IPv4 or IPv6 check.</li>
+              <li><strong>Hint 3</strong>: Collect all available information.</li>
+              <li><strong>Hint 4</strong>: Create the report in PDF format.</li>
+              <li><strong>Hint 5</strong>: Validate your report here: <a href="https://www.cyberwolf.pro/bug-report-validator" target="_blank" rel="noopener noreferrer">CyberWolf Bug Report Validator</a>.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="card report" id="report-card">
+          <div class="report-header">
+            <h2 style="margin:0">Report</h2>
+            <div class="row-actions">
+              <button class="btn warn" id="btnExportPdf" type="button">Export PDF</button>
+              <a class="btn secondary" href="https://www.cyberwolf.pro/bug-report-validator" target="_blank" rel="noopener noreferrer">Open Report Validator</a>
+            </div>
+          </div>
+
+          <div class="section" id="summarySection">
+            <h3>Summary</h3>
+            <div class="keyvals" id="summaryKeyvals">
+              <div class="key">Target URL</div><div id="sumUrl" class="value muted">—</div>
+              <div class="key">Hostname</div><div id="sumHost" class="value muted">—</div>
+              <div class="key">Manual IP</div><div id="sumIp" class="value muted">—</div>
+              <div class="key">Collected</div><div id="sumCollectedAt" class="value muted">—</div>
+            </div>
+          </div>
+
+          <div class="section" id="dnsSection">
+            <h3>DNS Records</h3>
+            <div class="muted" id="dnsStatus">No data.</div>
+            <table id="dnsTable" style="display:none">
+              <thead>
+                <tr><th>Type</th><th>Value</th><th>TTL</th></tr>
+              </thead>
+              <tbody id="dnsRows"></tbody>
+            </table>
+          </div>
+
+          <div class="section" id="ipSection">
+            <h3>IP Intelligence</h3>
+            <div class="muted" id="ipStatus">No data.</div>
+            <table id="ipTable" style="display:none">
+              <thead>
+                <tr>
+                  <th>IP</th><th>rDNS</th><th>ASN</th><th>ISP/Org</th><th>Country</th><th>City</th><th>Timezone</th>
+                </tr>
+              </thead>
+              <tbody id="ipRows"></tbody>
+            </table>
+          </div>
+
+          <div class="section" id="notesSection">
+            <h3>Notes</h3>
+            <p class="muted" id="notes">Use this space to add any observations about the target's IP footprint.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      Built as a single-file utility. Data via public DNS and IP intel APIs. Accuracy not guaranteed.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script>
+      const $ = (sel) => document.querySelector(sel);
+
+      const urlInput = $('#urlInput');
+      const ipInput = $('#ipInput');
+      const btnCheckUrl = $('#btnCheckUrl');
+      const btnCheckIp = $('#btnCheckIp');
+      const btnCollectAll = $('#btnCollectAll');
+      const btnClear = $('#btnClear');
+      const btnExportPdf = $('#btnExportPdf');
+
+      const sumUrl = $('#sumUrl');
+      const sumHost = $('#sumHost');
+      const sumIp = $('#sumIp');
+      const sumCollectedAt = $('#sumCollectedAt');
+
+      const dnsStatus = $('#dnsStatus');
+      const dnsTable = $('#dnsTable');
+      const dnsRows = $('#dnsRows');
+
+      const ipStatus = $('#ipStatus');
+      const ipTable = $('#ipTable');
+      const ipRows = $('#ipRows');
+
+      function setBusy(el, busy) {
+        if (!el) return;
+        el.disabled = !!busy;
+        el.textContent = busy ? 'Working…' : el.getAttribute('data-label') || el.textContent;
+      }
+
+      function nowString() {
+        return new Date().toLocaleString();
+      }
+
+      function normalizeHostname(value) {
+        if (!value) return '';
+        try {
+          if (/^https?:\/\//i.test(value)) {
+            const u = new URL(value);
+            return u.hostname.toLowerCase();
+          }
+          return value.trim().replace(/^\.+|\.+$/g, '').toLowerCase();
+        } catch (e) {
+          return '';
+        }
+      }
+
+      // IPv4 and IPv6 validators
+      const ipv4Regex = /^(25[0-5]|2[0-4]\d|[01]?\d?\d)(\.(25[0-5]|2[0-4]\d|[01]?\d?\d)){3}$/;
+      // Simplified IPv6 (covers common forms)
+      const ipv6Regex = /^(([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|([0-9a-f]{1,4}:){1,7}:|:([0-9a-f]{1,4}:){1,7}|([0-9a-f]{1,4}:){1,6}:[0-9a-f]{1,4}|([0-9a-f]{1,4}:){1,5}(:[0-9a-f]{1,4}){1,2}|([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,3}|([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,4}|([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,5}|[0-9a-f]{1,4}:((:[0-9a-f]{1,4}){1,6})|:((:[0-9a-f]{1,4}){1,7}|:))(%.+)?$/i;
+      function isIp(input) { return ipv4Regex.test(input) || ipv6Regex.test(input); }
+
+      function toPtrName(ip) {
+        if (ipv4Regex.test(ip)) {
+          return ip.split('.').reverse().join('.') + '.in-addr.arpa';
+        }
+        if (ipv6Regex.test(ip)) {
+          // Expand IPv6 to full, then nibble-reverse
+          const full = expandIpv6(ip);
+          const nibbles = full.replace(/:/g, '').split('');
+          return nibbles.reverse().join('.') + '.ip6.arpa';
+        }
+        return '';
+      }
+
+      // Expand IPv6 like 2001:db8::1 to full 8 groups
+      function expandIpv6(ip) {
+        if (!ip.includes('::')) {
+          return ip.split(':').map(h => h.padStart(4, '0')).join(':');
+        }
+        const parts = ip.split('::');
+        const left = parts[0] ? parts[0].split(':') : [];
+        const right = parts[1] ? parts[1].split(':') : [];
+        const missing = 8 - (left.length + right.length);
+        const zeros = Array(Math.max(missing, 0)).fill('0');
+        const full = [...left, ...zeros, ...right].map(h => h.padStart(4, '0')).join(':');
+        return full;
+      }
+
+      async function fetchJson(url) {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }
+
+      async function resolveDns(hostname) {
+        const types = ['A','AAAA','CNAME','MX','NS','TXT'];
+        const promises = types.map(async (t) => {
+          try {
+            const data = await fetchJson(`https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=${t}`);
+            const answers = data.Answer || [];
+            return answers.map(a => ({ type: t, value: String(a.data), ttl: data.Authoritative ? data.Authoritative.TTL : (a.TTL || '') }));
+          } catch (e) {
+            return [];
+          }
+        });
+        const results = (await Promise.all(promises)).flat();
+        return results;
+      }
+
+      async function reverseDns(ip) {
+        try {
+          const ptrName = toPtrName(ip);
+          if (!ptrName) return '';
+          const data = await fetchJson(`https://dns.google/resolve?name=${encodeURIComponent(ptrName)}&type=PTR`);
+          const ans = (data.Answer || []).map(a => a.data.replace(/\.$/, ''));
+          return ans[0] || '';
+        } catch (e) { return ''; }
+      }
+
+      async function ipIntel(ip) {
+        try {
+          const info = await fetchJson(`https://ipwho.is/${encodeURIComponent(ip)}`);
+          if (!info || info.success === false) throw new Error('Lookup failed');
+          return {
+            ip: info.ip,
+            asn: info.connection?.asn || info.asn || '',
+            isp: info.connection?.isp || info.isp || info.org || '',
+            org: info.connection?.org || info.org || '',
+            country: info.country || info.country_code || '',
+            city: info.city || '',
+            timezone: info.timezone?.id || info.timezone || '',
+            lat: info.latitude,
+            lon: info.longitude,
+          };
+        } catch (e) {
+          // fallback to ip-api
+          try {
+            const alt = await fetchJson(`https://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,message,query,as,isp,org,country,city,timezone,lat,lon`);
+            if (alt.status !== 'success') throw new Error(alt.message || 'ip-api failed');
+            return {
+              ip: alt.query,
+              asn: alt.as || '',
+              isp: alt.isp || '',
+              org: alt.org || '',
+              country: alt.country || '',
+              city: alt.city || '',
+              timezone: alt.timezone || '',
+              lat: alt.lat,
+              lon: alt.lon,
+            };
+          } catch (e2) {
+            return null;
+          }
+        }
+      }
+
+      function clearTables() {
+        dnsRows.innerHTML = '';
+        dnsTable.style.display = 'none';
+        dnsStatus.textContent = 'No data.';
+        ipRows.innerHTML = '';
+        ipTable.style.display = 'none';
+        ipStatus.textContent = 'No data.';
+      }
+
+      function updateSummary({ url, host, ip }) {
+        sumUrl.textContent = url || '—';
+        sumHost.textContent = host || '—';
+        sumIp.textContent = ip || '—';
+        sumCollectedAt.textContent = nowString();
+      }
+
+      function addDnsRows(rows) {
+        if (!rows || rows.length === 0) {
+          dnsStatus.textContent = 'No DNS answers found.';
+          dnsTable.style.display = 'none';
+          return;
+        }
+        dnsRows.innerHTML = '';
+        for (const r of rows) {
+          const tr = document.createElement('tr');
+          const ttl = (typeof r.ttl === 'number' && r.ttl >= 0) ? r.ttl : '';
+          tr.innerHTML = `<td>${r.type}</td><td>${escapeHtml(r.value)}</td><td>${ttl}</td>`;
+          dnsRows.appendChild(tr);
+        }
+        dnsTable.style.display = '';
+        dnsStatus.textContent = '';
+      }
+
+      function addIpRows(list) {
+        if (!list || list.length === 0) {
+          ipStatus.textContent = 'No IP intelligence collected.';
+          ipTable.style.display = 'none';
+          return;
+        }
+        ipRows.innerHTML = '';
+        for (const item of list) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${escapeHtml(item.ip)}</td><td>${escapeHtml(item.ptr || '')}</td><td>${escapeHtml(item.asn || '')}</td><td>${escapeHtml(item.isp || item.org || '')}</td><td>${escapeHtml(item.country || '')}</td><td>${escapeHtml(item.city || '')}</td><td>${escapeHtml(item.timezone || '')}</td>`;
+          ipRows.appendChild(tr);
+        }
+        ipTable.style.display = '';
+        ipStatus.textContent = '';
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
+      }
+
+      async function onCheckUrl() {
+        const raw = urlInput.value.trim();
+        const host = normalizeHostname(raw);
+        updateSummary({ url: raw || '', host, ip: sumIp.textContent !== '—' ? sumIp.textContent : '' });
+        clearTables();
+        if (!host) {
+          dnsStatus.innerHTML = '<span class="bad">Enter a valid URL or hostname.</span>';
+          return;
+        }
+        btnCheckUrl.setAttribute('data-label', 'Check URL DNS');
+        setBusy(btnCheckUrl, true);
+        dnsStatus.textContent = 'Resolving DNS records…';
+        try {
+          const rows = await resolveDns(host);
+          addDnsRows(rows);
+        } catch (e) {
+          dnsStatus.innerHTML = '<span class="bad">DNS lookup failed.</span>';
+        } finally {
+          setBusy(btnCheckUrl, false);
+        }
+      }
+
+      async function onCheckIp() {
+        const rawIp = ipInput.value.trim();
+        updateSummary({ url: sumUrl.textContent !== '—' ? sumUrl.textContent : '', host: sumHost.textContent !== '—' ? sumHost.textContent : '', ip: rawIp || '' });
+        if (!rawIp || !isIp(rawIp)) {
+          ipStatus.innerHTML = '<span class="bad">Enter a valid IPv4 or IPv6 address.</span>';
+          return;
+        }
+        btnCheckIp.setAttribute('data-label', 'Check IP Info');
+        setBusy(btnCheckIp, true);
+        ipStatus.textContent = 'Collecting IP intelligence…';
+        try {
+          const intel = await ipIntel(rawIp);
+          const ptr = await reverseDns(rawIp);
+          if (!intel) throw new Error('No data');
+          addIpRows([{ ...intel, ptr }]);
+        } catch (e) {
+          ipStatus.innerHTML = '<span class="bad">IP lookup failed.</span>';
+        } finally {
+          setBusy(btnCheckIp, false);
+        }
+      }
+
+      async function onCollectAll() {
+        const rawUrl = urlInput.value.trim();
+        const host = normalizeHostname(rawUrl);
+        const rawIp = ipInput.value.trim();
+        updateSummary({ url: rawUrl || '', host, ip: rawIp || '' });
+        clearTables();
+        btnCollectAll.setAttribute('data-label', 'Collect All');
+        setBusy(btnCollectAll, true);
+        dnsStatus.textContent = host ? 'Resolving DNS records…' : 'No hostname provided.';
+        ipStatus.textContent = (rawIp && isIp(rawIp)) ? 'Collecting IP intelligence…' : 'Awaiting IP or resolved A/AAAA.';
+        try {
+          let dnsRowsAll = [];
+          let ipList = [];
+          if (host) {
+            dnsRowsAll = await resolveDns(host);
+            addDnsRows(dnsRowsAll);
+            const ipsFromDns = dnsRowsAll
+              .filter(r => r.type === 'A' || r.type === 'AAAA')
+              .map(r => r.value.replace(/\.$/, ''))
+              .filter(isIp);
+            ipList.push(...ipsFromDns);
+          }
+          if (rawIp && isIp(rawIp)) {
+            ipList.push(rawIp);
+          }
+          ipList = Array.from(new Set(ipList));
+          if (ipList.length === 0) {
+            ipStatus.textContent = 'No IPs available to analyze.';
+          } else {
+            const intelList = await Promise.all(ipList.map(async (ip) => {
+              const intel = await ipIntel(ip);
+              const ptr = await reverseDns(ip);
+              return intel ? { ...intel, ptr } : null;
+            }));
+            addIpRows(intelList.filter(Boolean));
+          }
+        } catch (e) {
+          dnsStatus.innerHTML = '<span class="bad">DNS or IP collection failed.</span>';
+        } finally {
+          setBusy(btnCollectAll, false);
+        }
+      }
+
+      function onClear() {
+        urlInput.value = '';
+        ipInput.value = '';
+        updateSummary({ url: '', host: '', ip: '' });
+        clearTables();
+      }
+
+      async function exportPdf() {
+        try {
+          const node = document.getElementById('report-card');
+          const canvas = await html2canvas(node, { backgroundColor: '#ffffff', scale: 2 });
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'pt', 'a4');
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          const imgWidth = pageWidth - 40; // margins
+          const imgHeight = canvas.height * imgWidth / canvas.width;
+
+          let position = 20;
+          let remaining = imgHeight;
+          let y = position;
+          let heightLeft = imgHeight;
+
+          // If image longer than a page, slice across pages
+          pdf.addImage(imgData, 'PNG', 20, y, imgWidth, Math.min(imgHeight, pageHeight - 40), undefined, 'FAST');
+          heightLeft -= pageHeight - 40;
+          while (heightLeft > 0) {
+            pdf.addPage();
+            y = 20;
+            pdf.addImage(imgData, 'PNG', 20, y - (imgHeight - heightLeft), imgWidth, Math.min(imgHeight, pageHeight - 40), undefined, 'FAST');
+            heightLeft -= pageHeight - 40;
+          }
+          pdf.save('ip-footprint-report.pdf');
+        } catch (e) {
+          alert('Failed to export PDF.');
+        }
+      }
+
+      // Wire events
+      btnCheckUrl.addEventListener('click', onCheckUrl);
+      btnCheckIp.addEventListener('click', onCheckIp);
+      btnCollectAll.addEventListener('click', onCollectAll);
+      btnClear.addEventListener('click', onClear);
+      btnExportPdf.addEventListener('click', exportPdf);
+
+      // Enter key shortcuts
+      urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onCheckUrl(); });
+      ipInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onCheckIp(); });
+
+      // Initial state
+      updateSummary({ url: '', host: '', ip: '' });
+      clearTables();
+    </script>
+  </body>
+</html>
+
