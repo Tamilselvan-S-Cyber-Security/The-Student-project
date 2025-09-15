@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Address Footprint Gathering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Background Shapes */
+        .bg-shapes {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .square-shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .square-left {
+            width: 200px;
+            height: 200px;
+            left: -100px;
+            top: 20%;
+            animation-delay: 0s;
+        }
+
+        .square-right {
+            width: 150px;
+            height: 150px;
+            right: -75px;
+            top: 60%;
+            animation-delay: 5s;
+        }
+
+        .square-center {
+            width: 250px;
+            height: 250px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-20px) rotate(90deg);
+            }
+            50% {
+                transform: translateY(0) rotate(180deg);
+            }
+            75% {
+                transform: translateY(20px) rotate(270deg);
+            }
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            opacity: 0.9;
+        }
+
+        /* Main Content Card */
+        .main-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        /* Hints Section */
+        .hints-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .hints-section h3 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .hint-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .hint-number {
+            background: #2a5298;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        /* Form Section */
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2a5298;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #2a5298;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .results-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .results-section h3 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .result-value {
+            color: #2a5298;
+            font-weight: 500;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2a5298;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .main-card {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .hint-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .hint-number {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            .result-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+
+            .square-shape {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 0.9rem;
+            }
+
+            .main-card {
+                padding: 15px;
+            }
+        }
+
+        /* Print Styles for PDF */
+        @media print {
+            body {
+                background: white;
+            }
+
+            .bg-shapes {
+                display: none;
+            }
+
+            .main-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .btn {
+                display: none;
+            }
+
+            .header {
+                color: #333;
+            }
+
+            .header h1 {
+                text-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Shapes -->
+    <div class="bg-shapes">
+        <div class="square-shape square-left"></div>
+        <div class="square-shape square-right"></div>
+        <div class="square-shape square-center"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>IP Address Footprint Gathering</h1>
+            <p>Comprehensive IP analysis and information gathering tool</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="main-card">
+            <!-- Hints Section -->
+            <div class="hints-section">
+                <h3>📋 How to Use This Tool</h3>
+                <div class="hint-item">
+                    <div class="hint-number">1</div>
+                    <div>Enter the target URL to check for IP address (e.g., example.com)</div>
+                </div>
+                <div class="hint-item">
+                    <div class="hint-number">2</div>
+                    <div>Select IP version: IPv4 or IPv6 for specific checking</div>
+                </div>
+                <div class="hint-item">
+                    <div class="hint-number">3</div>
+                    <div>Click "Gather Information" to collect comprehensive data</div>
+                </div>
+                <div class="hint-item">
+                    <div class="hint-number">4</div>
+                    <div>Generate a PDF report with all gathered information</div>
+                </div>
+                <div class="hint-item">
+                    <div class="hint-number">5</div>
+                    <div>Validate your report at: <a href="https://www.cyberwolf.pro/bug-report-validator" target="_blank">cyberwolf.pro/bug-report-validator</a></div>
+                </div>
+            </div>
+
+            <!-- Form Section -->
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="targetUrl">Target URL</label>
+                    <input type="text" id="targetUrl" placeholder="Enter domain name (e.g., example.com)" />
+                </div>
+
+                <div class="form-group">
+                    <label>IP Version</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="ipVersion" value="ipv4" checked />
+                            IPv4
+                        </label>
+                        <label>
+                            <input type="radio" name="ipVersion" value="ipv6" />
+                            IPv6
+                        </label>
+                        <label>
+                            <input type="radio" name="ipVersion" value="both" />
+                            Both
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Button Group -->
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="gatherInformation()">
+                    <span>🔍</span> Gather Information
+                </button>
+                <button class="btn btn-secondary" onclick="clearResults()">
+                    <span>🗑️</span> Clear
+                </button>
+                <button class="btn btn-success" onclick="generatePDF()">
+                    <span>📄</span> Generate PDF Report
+                </button>
+                <button class="btn btn-info" onclick="validateReport()">
+                    <span>✅</span> Validate Report
+                </button>
+            </div>
+
+            <!-- Loading Section -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Gathering information...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="results">
+                <h3>📊 Gathered Information</h3>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        let gatheredData = null;
+
+        async function gatherInformation() {
+            const targetUrl = document.getElementById('targetUrl').value.trim();
+            const ipVersion = document.querySelector('input[name="ipVersion"]:checked').value;
+
+            if (!targetUrl) {
+                alert('Please enter a target URL');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+
+            try {
+                // Simulate API call with mock data
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Mock data for demonstration
+                gatheredData = {
+                    domain: targetUrl,
+                    ipVersion: ipVersion,
+                    timestamp: new Date().toLocaleString(),
+                    ipAddresses: {
+                        ipv4: ipVersion !== 'ipv6' ? generateRandomIPv4() : null,
+                        ipv6: ipVersion !== 'ipv4' ? generateRandomIPv6() : null
+                    },
+                    geoLocation: {
+                        country: 'United States',
+                        region: 'California',
+                        city: 'San Francisco',
+                        latitude: '37.7749',
+                        longitude: '-122.4194',
+                        timezone: 'America/Los_Angeles'
+                    },
+                    networkInfo: {
+                        isp: 'Example ISP Inc.',
+                        organization: 'Example Organization',
+                        asn: 'AS' + Math.floor(Math.random() * 100000),
+                        asnOrg: 'Example Network Services'
+                    },
+                    dnsRecords: {
+                        a: ipVersion !== 'ipv6' ? [generateRandomIPv4()] : [],
+                        aaaa: ipVersion !== 'ipv4' ? [generateRandomIPv6()] : [],
+                        mx: ['mail.' + targetUrl],
+                        txt: ['v=spf1 include:_spf.example.com ~all'],
+                        ns: ['ns1.' + targetUrl, 'ns2.' + targetUrl]
+                    },
+                    ports: {
+                        open: [80, 443, 22, 21],
+                        filtered: [3306, 5432],
+                        services: {
+                            80: 'HTTP',
+                            443: 'HTTPS',
+                            22: 'SSH',
+                            21: 'FTP'
+                        }
+                    },
+                    security: {
+                        sslCertificate: true,
+                        sslExpiry: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+                        headers: {
+                            'X-Frame-Options': 'SAMEORIGIN',
+                            'X-Content-Type-Options': 'nosniff',
+                            'Strict-Transport-Security': 'max-age=31536000'
+                        }
+                    }
+                };
+
+                displayResults();
+            } catch (error) {
+                alert('Error gathering information: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
+        function generateRandomIPv4() {
+            return Array.from({length: 4}, () => Math.floor(Math.random() * 256)).join('.');
+        }
+
+        function generateRandomIPv6() {
+            return Array.from({length: 8}, () => 
+                Math.floor(Math.random() * 65536).toString(16).padStart(4, '0')
+            ).join(':');
+        }
+
+        function displayResults() {
+            if (!gatheredData) return;
+
+            const resultsContent = document.getElementById('resultsContent');
+            resultsContent.innerHTML = '';
+
+            // Basic Information
+            addResultItem('Domain', gatheredData.domain);
+            addResultItem('Scan Time', gatheredData.timestamp);
+            addResultItem('IP Version', gatheredData.ipVersion.toUpperCase());
+
+            // IP Addresses
+            if (gatheredData.ipAddresses.ipv4) {
+                addResultItem('IPv4 Address', gatheredData.ipAddresses.ipv4);
+            }
+            if (gatheredData.ipAddresses.ipv6) {
+                addResultItem('IPv6 Address', gatheredData.ipAddresses.ipv6);
+            }
+
+            // Geo Location
+            addResultItem('Country', gatheredData.geoLocation.country);
+            addResultItem('Region', gatheredData.geoLocation.region);
+            addResultItem('City', gatheredData.geoLocation.city);
+            addResultItem('Coordinates', `${gatheredData.geoLocation.latitude}, ${gatheredData.geoLocation.longitude}`);
+
+            // Network Information
+            addResultItem('ISP', gatheredData.networkInfo.isp);
+            addResultItem('Organization', gatheredData.networkInfo.organization);
+            addResultItem('ASN', gatheredData.networkInfo.asn);
+
+            // Security
+            addResultItem('SSL Certificate', gatheredData.security.sslCertificate ? 'Valid' : 'Not Found');
+            addResultItem('SSL Expiry', gatheredData.security.sslExpiry);
+
+            // Open Ports
+            addResultItem('Open Ports', gatheredData.ports.open.join(', '));
+
+            document.getElementById('results').classList.add('show');
+        }
+
+        function addResultItem(label, value) {
+            const resultsContent = document.getElementById('resultsContent');
+            const item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML = `
+                <span class="result-label">${label}:</span>
+                <span class="result-value">${value}</span>
+            `;
+            resultsContent.appendChild(item);
+        }
+
+        function clearResults() {
+            document.getElementById('targetUrl').value = '';
+            document.getElementById('results').classList.remove('show');
+            gatheredData = null;
+        }
+
+        async function generatePDF() {
+            if (!gatheredData) {
+                alert('Please gather information first');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+
+            // Title
+            pdf.setFontSize(20);
+            pdf.setTextColor(42, 82, 152);
+            pdf.text('IP Address Footprint Report', 20, 20);
+
+            // Add content
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            let yPosition = 40;
+
+            pdf.text(`Domain: ${gatheredData.domain}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`Report Generated: ${gatheredData.timestamp}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`IP Version: ${gatheredData.ipVersion.toUpperCase()}`, 20, yPosition);
+            yPosition += 20;
+
+            // IP Addresses Section
+            pdf.setFontSize(14);
+            pdf.setTextColor(42, 82, 152);
+            pdf.text('IP Addresses', 20, yPosition);
+            yPosition += 10;
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            if (gatheredData.ipAddresses.ipv4) {
+                pdf.text(`IPv4: ${gatheredData.ipAddresses.ipv4}`, 20, yPosition);
+                yPosition += 10;
+            }
+            if (gatheredData.ipAddresses.ipv6) {
+                pdf.text(`IPv6: ${gatheredData.ipAddresses.ipv6}`, 20, yPosition);
+                yPosition += 10;
+            }
+
+            // Geo Location Section
+            yPosition += 10;
+            pdf.setFontSize(14);
+            pdf.setTextColor(42, 82, 152);
+            pdf.text('Geographic Location', 20, yPosition);
+            yPosition += 10;
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(`Country: ${gatheredData.geoLocation.country}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`Region: ${gatheredData.geoLocation.region}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`City: ${gatheredData.geoLocation.city}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`Coordinates: ${gatheredData.geoLocation.latitude}, ${gatheredData.geoLocation.longitude}`, 20, yPosition);
+
+            // Network Information Section
+            yPosition += 20;
+            pdf.setFontSize(14);
+            pdf.setTextColor(42, 82, 152);
+            pdf.text('Network Information', 20, yPosition);
+            yPosition += 10;
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(`ISP: ${gatheredData.networkInfo.isp}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`Organization: ${gatheredData.networkInfo.organization}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`ASN: ${gatheredData.networkInfo.asn}`, 20, yPosition);
+
+            // Security Information
+            yPosition += 20;
+            pdf.setFontSize(14);
+            pdf.setTextColor(42, 82, 152);
+            pdf.text('Security Information', 20, yPosition);
+            yPosition += 10;
+
+            pdf.setFontSize(12);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(`SSL Certificate: ${gatheredData.security.sslCertificate ? 'Valid' : 'Not Found'}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`SSL Expiry: ${gatheredData.security.sslExpiry}`, 20, yPosition);
+            yPosition += 10;
+            pdf.text(`Open Ports: ${gatheredData.ports.open.join(', ')}`, 20, yPosition);
+
+            // Footer
+            pdf.setFontSize(10);
+            pdf.setTextColor(128, 128, 128);
+            pdf.text('Generated by IP Address Footprint Gathering Tool', 20, 280);
+            pdf.text('Validate at: https://www.cyberwolf.pro/bug-report-validator', 20, 285);
+
+            // Save the PDF
+            pdf.save(`IP_Report_${gatheredData.domain}_${Date.now()}.pdf`);
+        }
+
+        function validateReport() {
+            window.open('https://www.cyberwolf.pro/bug-report-validator', '_blank');
+        }
+
+        // Add enter key support
+        document.getElementById('targetUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                gatherInformation();
+            }
+        });
+    </script>
+</body>
+</html>
